@@ -28,18 +28,11 @@ A medallion architecture pipeline (Bronze → Silver → Gold) for ~10,000 facil
 └──────────────────────────────┬───────────────────────────────────┘
                                │
               ┌────────────────┼────────────────┐
-              │                │                │
-              ▼                ▼                ▼
-     ┌─────────────┐  ┌──────────────┐  ┌──────────────┐
-     │ Data Quality │  │  Semantic    │  │  (extensible)│
-     │ Agent        │  │  Classify    │  │              │
-     │              │  │  Agent       │  │              │
-     │ Profiles     │  │  104 messy   │  │              │
-     │ bronze →     │  │  categories  │  │              │
-     │ proposes 7   │  │  → 15 clean  │  │              │
-     │ cleaning     │  │  groups      │  │              │
-     │ rules + why  │  │              │  │              │
-     └──────┬───────┘  └──────┬───────┘  └──────────────┘
+               │                │
+               ▼                ▼
+      ┌─────────────┐  ┌──────────────┐
+      │ Data Quality │  │  Semantic    │
+      └──────┬───────┘  └──────┬───────┘
             │                 │
             │ cleaning rules  │ category mapping
             │ + justifications│
