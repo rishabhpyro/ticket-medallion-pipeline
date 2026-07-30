@@ -13,6 +13,7 @@ This agent can run in two modes:
 
 import json
 import logging
+import re
 from collections import Counter
 from datetime import datetime, timezone
 
@@ -62,7 +63,6 @@ def profile_bronze():
         elif col in ("created_at", "resolved_at"):
             # Count format patterns
             formats = Counter()
-            import re
             for v in non_null:
                 v = v.strip()
                 if re.match(r"^\d{4}-\d{2}-\d{2}T", v):
@@ -125,9 +125,12 @@ def generate_deterministic_rules(profile):
     This is the "deterministic fallback" mode.
     """
     rules = []
+    columns = profile.get("columns", {})
+    if not columns:
+        return rules
 
     # Rule 1: Date parsing
-    date_formats_created = profile["columns"]["created_at"].get("format_distribution", {})
+    date_formats_created = columns.get("created_at", {}).get("format_distribution", {})
     if any("Unknown" in k or "Invalid" in k for k in date_formats_created):
         rules.append({
             "rule_id": "DQ-001",
@@ -142,7 +145,7 @@ def generate_deterministic_rules(profile):
         })
 
     # Rule 2: Category normalization
-    cat_distinct = profile["columns"]["category"].get("total_distinct", 0)
+    cat_distinct = columns.get("category", {}).get("total_distinct", 0)
     if cat_distinct > 20:
         rules.append({
             "rule_id": "DQ-002",
@@ -160,8 +163,8 @@ def generate_deterministic_rules(profile):
         })
 
     # Rule 3: Priority normalization
-    pri_null = profile["columns"]["priority"]["null_rate_pct"]
-    pri_values = profile["columns"]["priority"].get("top_values", [])
+    pri_null = columns.get("priority", {}).get("null_rate_pct", 0)
+    pri_values = columns.get("priority", {}).get("top_values", [])
     pri_distinct = len(pri_values)
     if pri_distinct > 5 or pri_null > 5:
         rules.append({
@@ -177,7 +180,7 @@ def generate_deterministic_rules(profile):
         })
 
     # Rule 4: Cost cleaning
-    cost_data = profile["columns"]["cost"]
+    cost_data = columns.get("cost", {})
     if cost_data.get("negative_count", 0) > 0:
         rules.append({
             "rule_id": "DQ-004",
@@ -192,7 +195,7 @@ def generate_deterministic_rules(profile):
         })
 
     # Rule 5: SLA cleaning
-    sla_data = profile["columns"]["sla_hours"]
+    sla_data = columns.get("sla_hours", {})
     sentinel_count = sla_data.get("sentinel_999_count", 0)
     if sentinel_count > 0:
         rules.append({
@@ -261,7 +264,7 @@ def run_data_quality_agent(mode="deterministic"):
             "mode": "deterministic",
             "profile_summary": {
                 "total_rows": profile["total_rows"],
-                "column_count": len(profile["columns"]),
+                "column_count": len(columns),
             },
             "rules": rules,
         }

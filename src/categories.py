@@ -188,7 +188,7 @@ CATEGORY_KEYWORDS = [
     ("asbestos", "Health & Environmental"),
     ("inspection", "Compliance"),
     ("wheelchair", "Compliance"),
-    ("ada ", "Compliance"),
+    ("ada", "Compliance"),
 ]
 
 # ── Priority normalization ──────────────────────────────────────
@@ -206,7 +206,7 @@ VALID_STATUSES = {
 }
 
 # ── Number of distinct raw categories the mapping was built from ─
-RAW_CATEGORY_COUNT = 98
+RAW_CATEGORY_COUNT = 104  # number of entries in CATEGORY_MAPPING
 
 
 def classify_category(raw: str):

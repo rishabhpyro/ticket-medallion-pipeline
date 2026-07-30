@@ -20,7 +20,6 @@ from datetime import datetime, timezone
 
 from src.config import RAW_CATEGORIES, AGENT_OUTPUT_DIR
 from src.categories import CATEGORY_MAPPING
-from src.categories import RAW_CATEGORY_COUNT
 
 logger = logging.getLogger(__name__)
 

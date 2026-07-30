@@ -173,7 +173,6 @@ def main():
             description TEXT, submitted_by TEXT,
             assigned_to TEXT, resolution_notes TEXT,
             cost REAL, sla_hours INTEGER,
-            is_duplicate INTEGER DEFAULT 0,
             data_quality_flags TEXT,
             silver_processed_at TEXT
         )
@@ -182,9 +181,9 @@ def main():
 
     # Use the same CATEGORY_MAPPING and functions from silver.py
     import re
-    from decimal import Decimal, InvalidOperation
+    from decimal import Decimal
 
-    from src.categories import CATEGORY_MAPPING, PRIORITY_MAPPING, classify_category
+    from src.categories import PRIORITY_MAPPING, classify_category
 
     def parse_date_safe(value):
         if not value or not value.strip():
@@ -262,8 +261,8 @@ def main():
             INSERT INTO silver_tickets_cleaned
             (ticket_id, created_at, resolved_at, category_raw, category_normalized,
              priority, status, building, description, submitted_by, assigned_to,
-             resolution_notes, cost, sla_hours, is_duplicate, data_quality_flags, silver_processed_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+             resolution_notes, cost, sla_hours, data_quality_flags, silver_processed_at)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (tid, created_at, resolved_at, raw_cat, norm_cat, norm_pri,
               (row.get("status") or "").strip().title(),
               (row.get("building") or "").strip() or None,
@@ -271,7 +270,7 @@ def main():
               (row.get("submitted_by") or "").strip() or None,
               (row.get("assigned_to") or "").strip() or None,
               row.get("resolution_notes") or None,
-              cost, sla, 0, None, datetime.now(timezone.utc).isoformat()))
+              cost, sla, None, datetime.now(timezone.utc).isoformat()))
         silver_count += 1
     conn.commit()
     print(f"Silver rows: {silver_count}")

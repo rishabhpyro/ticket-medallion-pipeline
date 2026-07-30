@@ -34,7 +34,7 @@ A medallion architecture pipeline (Bronze → Silver → Gold) for ~10,000 facil
      │ Data Quality │  │  Semantic    │  │  (extensible)│
      │ Agent        │  │  Classify    │  │              │
      │              │  │  Agent       │  │              │
-     │ Profiles     │  │  98 messy    │  │              │
+     │ Profiles     │  │  104 messy   │  │              │
      │ bronze →     │  │  categories  │  │              │
      │ proposes 7   │  │  → 15 clean  │  │              │
      │ cleaning     │  │  groups      │  │              │
@@ -139,9 +139,9 @@ Column: created_at
 
 ### Agent C: Semantic Classification Agent
 
-**What it does:** Takes 98 unique, messy category spellings from the bronze layer and maps them to 15 clean business categories using semantic understanding (e.g., knowing that "vertical transport" = "lift" = "elevator/escalator" all mean Elevator).
+**What it does:** Takes 104 unique, messy category spellings from the bronze layer and maps them to 15 clean business categories using semantic understanding (e.g., knowing that "vertical transport" = "lift" = "elevator/escalator" all mean Elevator).
 
-**Sample input:** (5 of 98 categories)
+**Sample input:** (5 of 104 mapping entries)
 ```
 elevator, ELEVATOR, elevator/escalator, vertical transport, lift
 hvac, HVAC, A/C, a/c, climate control, heating/cooling
@@ -265,7 +265,7 @@ The pipeline logs every stage with row counts:
 2026-07-30 16:00:03 [INFO   ] src.agents.data_quality  === AGENT: Data Quality Agent ===
 2026-07-30 16:00:03 [INFO   ] src.agents.data_quality  Generated 7 cleaning rules → agent_outputs/...
 2026-07-30 16:00:03 [INFO   ] src.agents.semantic_cla  === AGENT: Semantic Classification Agent ===
-2026-07-30 16:00:03 [INFO   ] src.agents.semantic_cla  Coverage: 95.9% (94/98 mapped)
+2026-07-30 16:00:03 [INFO   ] src.agents.semantic_cla  Coverage: 100% (104/104 mapped)
 2026-07-30 16:00:03 [INFO   ] src.pipeline.silver      === SILVER LAYER: Starting transformation ===
 2026-07-30 16:00:05 [INFO   ] src.pipeline.silver      Silver transformation complete.
 2026-07-30 16:00:05 [INFO   ] src.pipeline.gold        === GOLD LAYER: Building aggregations ===
@@ -315,7 +315,7 @@ The pipeline applies these rules automatically. See `agent_outputs/data_quality_
 | Rule ID | Column | What it does |
 |---------|--------|-------------|
 | DQ-001 | created_at, resolved_at | Multi-format date parser (7 formats) |
-| DQ-002 | category | Normalize 98 spellings → 15 business categories |
+| DQ-002 | category | Normalize 104 raw variants → 15 business categories |
 | DQ-003 | priority | Normalize to CRITICAL/HIGH/MEDIUM/LOW (4 tiers) |
 | DQ-004 | cost | Clean $/commas, nullify negative + sentinel values |
 | DQ-005 | sla_hours | Nullify 999 sentinel, cast to INTEGER |

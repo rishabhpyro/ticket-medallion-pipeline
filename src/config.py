@@ -37,17 +37,25 @@ SOURCE_FILE = str(RAW_CSV)
 # --- Agent configuration ---
 # Dynamically extracted from the CSV at import time so it never goes stale.
 # Used by the Semantic Classification Agent for input reporting.
-def _load_raw_categories():
+_RAW_CATEGORIES_CACHE = None
+
+def get_raw_categories():
+    """Lazily load distinct category values from the CSV. Cached after first call."""
+    global _RAW_CATEGORIES_CACHE
+    if _RAW_CATEGORIES_CACHE is not None:
+        return _RAW_CATEGORIES_CACHE
     import csv
     try:
         with open(RAW_CSV, "r") as f:
             rows = list(csv.DictReader(f))
-        return sorted(set(
+        _RAW_CATEGORIES_CACHE = sorted(set(
             r.get("category", "").strip()
             for r in rows
             if r.get("category", "").strip()
         ))
     except Exception:
-        return []
+        _RAW_CATEGORIES_CACHE = []
+    return _RAW_CATEGORIES_CACHE
 
-RAW_CATEGORIES = _load_raw_categories()
+# Backward-compatible alias for code that imports RAW_CATEGORIES directly
+RAW_CATEGORIES = get_raw_categories()

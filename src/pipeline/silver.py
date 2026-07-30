@@ -10,8 +10,7 @@ from dateutil.parser import parse as parse_date, ParserError
 from src.config import BRONZE_SCHEMA, BRONZE_TABLE, SILVER_SCHEMA, SILVER_TABLE
 from src.db import get_cursor, truncate_table
 from src.categories import (
-    CATEGORY_MAPPING, PRIORITY_MAPPING, VALID_STATUSES,
-    GARBAGE_CATEGORIES, CATEGORY_KEYWORDS, classify_category,
+    VALID_STATUSES, classify_category, normalize_priority,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,11 +62,8 @@ def clean_cost(value: str):
     clean = val.replace("$", "").replace(",", "").replace('"', "").strip()
     try:
         c = Decimal(clean)
-        # Flag clearly bad sentinel values as None
-        if c <= -999 or c <= 0:
-            # Negative and zero costs are suspicious; null them for gold but flag in quality_flags
-            return c  # Keep for silver, flag later
-        if c > 100000:  # Unreasonable for facility tickets
+        # Pass through all values; validation happens in build_silver()
+        if c > 100000:  # Unreasonable for a single facility ticket
             return None
         return c
     except (InvalidOperation, ValueError):
@@ -85,7 +81,7 @@ def clean_sla(value: str):
 
     try:
         s = int(float(val))
-        if s == 999:  # Sentinel value
+        if s in (999, -1):  # Sentinel values
             return None
         if s < 0:  # Invalid
             return None
@@ -120,12 +116,12 @@ def build_silver():
     logger.info(f"Fetched {len(bronze_rows)} rows from bronze")
 
     insert_sql = f"""
-        INSERT INTO {SILVER_SCHEMA}.{SILVER_TABLE}
+            INSERT INTO {SILVER_SCHEMA}.{SILVER_TABLE}
             (ticket_id, created_at, resolved_at, category_raw, category_normalized,
              priority, status, building, description, submitted_by, assigned_to,
-             resolution_notes, cost, sla_hours, is_duplicate, data_quality_flags,
+             resolution_notes, cost, sla_hours, data_quality_flags,
              silver_processed_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     stats = {
@@ -156,8 +152,6 @@ def build_silver():
             is_dup = "duplicate of ticket" in res_notes.lower()
             if is_dup:
                 stats["skipped_duplicate"] += 1
-                # Still load but flag; don't skip — interviewer may want to see
-                # Actually, let's skip true duplicates to keep silver clean
                 continue
 
             # Parse dates
@@ -181,14 +175,12 @@ def build_silver():
             if norm_cat and norm_cat != raw_cat:
                 stats["category_normalized"] += 1
 
-            # Normalize priority
+            # Normalize priority (shared logic from src.categories)
             raw_pri = (row.get("priority") or "").strip().lower()
-            norm_pri = PRIORITY_MAPPING.get(raw_pri, raw_pri.upper() if raw_pri else None)
+            norm_pri, pri_flags = normalize_priority(row.get("priority") or "")
+            flags.update(pri_flags)
             if norm_pri and norm_pri != raw_pri.upper():
                 stats["priority_normalized"] += 1
-            if norm_pri and norm_pri not in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
-                flags["unrecognized_priority"] = raw_pri
-                norm_pri = "MEDIUM"  # Default fallback
 
             # Validate status
             raw_status = (row.get("status") or "").strip().lower()
@@ -225,7 +217,6 @@ def build_silver():
                 res_notes.strip() or None,
                 cost,
                 sla,
-                False,  # is_duplicate
                 json.dumps(flags) if flags else None,
                 datetime.now(timezone.utc),
             ))

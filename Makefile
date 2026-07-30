@@ -1,27 +1,25 @@
-.PHONY: run up down clean psql agents-only bronze-only
+.PHONY: run up down clean psql pipeline-only bronze-only
 
 # ── One-command setup and run ──
 run:
-	docker-compose up -d
-	@echo "Waiting for PostgreSQL to be ready..."
-	@sleep 3
+	docker compose up -d --wait
 	python3 src/main.py
 
 # ── Docker lifecycle ──
 up:
-	docker-compose up -d
+	docker compose up -d
 
 down:
-	docker-compose down
+	docker compose down
 
 clean:
-	docker-compose down -v
+	docker compose down -v
 
 # ── Pipeline stages (after docker-compose up) ──
 bronze-only:
 	python3 src/main.py --bronze-only
 
-agents-only:
+pipeline-only:
 	python3 src/main.py --skip-agents
 
 # ── Connect to PostgreSQL ──

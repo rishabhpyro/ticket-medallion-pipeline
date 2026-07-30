@@ -84,7 +84,6 @@ def create_silver_table():
         resolution_notes   TEXT,
         cost               DECIMAL(12,2),
         sla_hours          INTEGER,
-        is_duplicate       BOOLEAN DEFAULT FALSE,
         data_quality_flags JSONB DEFAULT '{{}}',
         silver_processed_at TIMESTAMPTZ DEFAULT NOW()
     );
