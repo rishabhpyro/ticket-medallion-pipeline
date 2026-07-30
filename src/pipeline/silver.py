@@ -38,6 +38,12 @@ CATEGORY_MAPPING = {
     "temperature control": "HVAC",
     "humidity": "HVAC",
     "indoor air quality": "HVAC",
+    # HVAC — variants from actual CSV
+    "ac": "HVAC",
+    "air conditioning": "HVAC",
+    "heating cooling": "HVAC",
+    "hvac system": "HVAC",
+    "cold": "HVAC",
     # Plumbing / Water
     "plumbing": "Plumbing",
     "plumbing issue": "Plumbing",
@@ -205,6 +211,85 @@ def clean_cost(value: str):
         return None
 
 
+# ── Garbage category values to reject ─────────────────────────
+GARBAGE_CATEGORIES = {"???", "asdf", "delete me", "test", "null", "", "n/a", "none", "tbd", "unknown"}
+
+# ── Keyword-based fallback for long descriptions ──────────────
+# Some rows have full sentences in the category field (data entry errors).
+# These keywords let us classify them rather than producing title-cased noise.
+CATEGORY_KEYWORDS = [
+    ("elevator", "Elevator"),
+    ("lift", "Elevator"),
+    ("toilet", "Plumbing"),
+    ("faucet", "Plumbing"),
+    ("pipe burst", "Plumbing"),
+    ("water leak", "Plumbing"),
+    ("hot water", "Plumbing"),
+    ("overflowing", "Plumbing"),
+    ("leak", "Plumbing"),
+    ("plumbing", "Plumbing"),
+    ("ac unit", "HVAC"),
+    ("thermo", "HVAC"),
+    ("temperature", "HVAC"),
+    ("hvac", "HVAC"),
+    ("cooling", "HVAC"),
+    ("heating", "HVAC"),
+    ("unit", "HVAC"),
+    ("cycling", "HVAC"),
+    ("breaker", "Electrical"),
+    ("outlet", "Electrical"),
+    ("electrical", "Electrical"),
+    ("power", "Electrical"),
+    ("fire extinguisher", "Fire & Safety"),
+    ("smoke detector", "Fire & Safety"),
+    ("emergency exit", "Fire & Safety"),
+    ("sprinkler", "Fire & Safety"),
+    ("security camera", "Security"),
+    ("access card", "Security"),
+    ("badge", "Security"),
+    ("door", "Security"),
+    ("lock", "Security"),
+    ("wifi", "IT & Network"),
+    ("network", "IT & Network"),
+    ("vpn", "IT & Network"),
+    ("outage", "IT & Network"),
+    ("printer", "IT & Network"),
+    ("desk", "Facilities"),
+    ("furniture", "Facilities"),
+    ("window", "Facilities"),
+    ("chair", "Facilities"),
+    ("restroom", "Cleaning"),
+    ("cleaning", "Cleaning"),
+    ("janitor", "Cleaning"),
+    ("bird", "Pest Control"),
+    ("bugs", "Pest Control"),
+    ("wasp", "Pest Control"),
+    ("pest", "Pest Control"),
+    ("rodent", "Pest Control"),
+    ("mold", "Health & Environmental"),
+    ("asbestos", "Health & Environmental"),
+    ("inspection", "Compliance"),
+    ("wheelchair", "Compliance"),
+    ("ada ", "Compliance"),
+]
+
+
+def classify_category_fallback(raw: str) -> str:
+    """
+    Fallback classifier for categories not in the explicit CATEGORY_MAPPING.
+    Uses keyword matching for long descriptions and garbage detection.
+    Returns the normalized category or None if unclassifiable.
+    """
+    val = raw.strip().lower()
+    if not val or val in GARBAGE_CATEGORIES:
+        return None
+    # Check keywords
+    for keyword, norm in CATEGORY_KEYWORDS:
+        if keyword in val:
+            return norm
+    return None
+
+
 def clean_sla(value: str):
     """Clean SLA hours. Returns int or None."""
     if not value or not value.strip():
@@ -307,7 +392,19 @@ def build_silver():
 
             # Normalize category
             raw_cat = (row.get("category") or "").strip().lower()
-            norm_cat = CATEGORY_MAPPING.get(raw_cat, raw_cat.title() if raw_cat else None)
+            norm_cat = CATEGORY_MAPPING.get(raw_cat)
+            if not norm_cat:
+                # Try keyword-based fallback for long descriptions
+                norm_cat = classify_category_fallback(raw_cat)
+            if not norm_cat and raw_cat:
+                # Check garbage (already rejected by fallback but just in case)
+                if raw_cat in GARBAGE_CATEGORIES:
+                    norm_cat = None
+                    flags["garbage_category"] = raw_cat
+                else:
+                    # Truly unclassifiable — flag and use title-case as last resort
+                    norm_cat = raw_cat.title()
+                    flags["unclassified_category"] = raw_cat
             if norm_cat and norm_cat != raw_cat:
                 stats["category_normalized"] += 1
 

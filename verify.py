@@ -188,6 +188,7 @@ def main():
         "elevator": "Elevator", "elevator/escalator": "Elevator", "lift": "Elevator", "vertical transport": "Elevator",
         "electrical": "Electrical", "electrical systems": "Electrical", "elec": "Electrical", "power": "Electrical", "power issue": "Electrical", "lighting": "Electrical", "generator": "Electrical", "ups/battery": "Electrical",
         "hvac": "HVAC", "a/c": "HVAC", "climate control": "HVAC", "heating/cooling": "HVAC", "temperature control": "HVAC", "humidity": "HVAC", "indoor air quality": "HVAC",
+        "ac": "HVAC", "air conditioning": "HVAC", "heating cooling": "HVAC", "hvac system": "HVAC", "cold": "HVAC",
         "plumbing": "Plumbing", "plumbing issue": "Plumbing", "water/plumbing": "Plumbing", "water issue": "Plumbing", "flooding": "Plumbing", "leak": "Plumbing",
         "fire safety": "Fire & Safety", "fire/safety": "Fire & Safety", "fire alarm": "Fire & Safety", "sprinkler": "Fire & Safety", "emergency systems": "Fire & Safety", "safety equipment": "Fire & Safety", "first aid": "Fire & Safety",
         "pest control": "Pest Control", "pest": "Pest Control", "exterminator": "Pest Control", "pest sighting": "Pest Control", "wildlife": "Pest Control",
@@ -207,6 +208,34 @@ def main():
         "medium": "MEDIUM", "med": "MEDIUM", "normal": "MEDIUM",
         "low": "LOW", "lo": "LOW",
     }
+    GARBAGE_CATS = {"???", "asdf", "delete me", "test", "null", "", "n/a", "none", "tbd", "unknown"}
+    CAT_KEYWORDS = [
+        ("elevator", "Elevator"), ("lift", "Elevator"),
+        ("toilet", "Plumbing"), ("faucet", "Plumbing"), ("pipe burst", "Plumbing"),
+        ("water leak", "Plumbing"), ("hot water", "Plumbing"), ("overflowing", "Plumbing"),
+        ("leak", "Plumbing"), ("plumbing", "Plumbing"),
+        ("ac unit", "HVAC"), ("thermo", "HVAC"), ("temperature", "HVAC"),
+        ("hvac", "HVAC"), ("cooling", "HVAC"), ("heating", "HVAC"),
+        ("unit", "HVAC"), ("cycling", "HVAC"),
+        ("breaker", "Electrical"), ("outlet", "Electrical"),
+        ("fire extinguisher", "Fire & Safety"), ("smoke detector", "Fire & Safety"),
+        ("emergency exit", "Fire & Safety"), ("sprinkler", "Fire & Safety"),
+        ("security camera", "Security"), ("access card", "Security"),
+        ("wifi", "IT & Network"), ("network", "IT & Network"), ("vpn", "IT & Network"),
+        ("desk", "Facilities"), ("furniture", "Facilities"), ("window", "Facilities"),
+        ("restroom", "Cleaning"), ("cleaning", "Cleaning"),
+        ("bird", "Pest Control"), ("bugs", "Pest Control"), ("wasp", "Pest Control"),
+        ("mold", "Health & Environmental"), ("asbestos", "Health & Environmental"),
+        ("inspection", "Compliance"), ("wheelchair", "Compliance"),
+    ]
+    def classify_fb(val):
+        v = val.strip().lower()
+        if not v or v in GARBAGE_CATS:
+            return None
+        for kw, norm in CAT_KEYWORDS:
+            if kw in v:
+                return norm
+        return None
 
     def parse_date_safe(value):
         if not value or not value.strip():
@@ -275,7 +304,14 @@ def main():
         created_at = parse_date_safe(row.get("created_at", ""))
         resolved_at = parse_date_safe(row.get("resolved_at", ""))
         raw_cat = (row.get("category") or "").strip().lower()
-        norm_cat = CATEGORY_MAPPING.get(raw_cat, raw_cat.title() if raw_cat else None)
+        norm_cat = CATEGORY_MAPPING.get(raw_cat)
+        if not norm_cat:
+            norm_cat = classify_fb(raw_cat)
+        if not norm_cat and raw_cat:
+            if raw_cat in GARBAGE_CATS:
+                norm_cat = None
+            else:
+                norm_cat = raw_cat.title()
         raw_pri = (row.get("priority") or "").strip().lower()
         norm_pri = PRIORITY_MAPPING.get(raw_pri, raw_pri.upper() if raw_pri else None)
         cost = clean_cost(row.get("cost", ""))
