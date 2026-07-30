@@ -212,6 +212,8 @@ hvac, HVAC, A/C, a/c, climate control, heating/cooling
 - Docker + Docker Compose
 - Python 3.9+
 - `pip3 install -r requirements.txt`
+- The dataset: `data/raw_tickets.csv` is a symlink to the original CSV.
+  If cloning this repo, update the symlink: `ln -sf /path/to/raw_tickets.csv data/raw_tickets.csv`
 
 ### Single Command
 ```bash

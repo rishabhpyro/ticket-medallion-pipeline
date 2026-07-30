@@ -35,33 +35,19 @@ GOLD_TABLES = {
 SOURCE_FILE = str(RAW_CSV)
 
 # --- Agent configuration ---
-# These are the 98 unique raw category values found in the data.
-# Used by the Semantic Classification Agent for normalization.
-RAW_CATEGORIES = [
-    "security", "plumbing", "pest control", "cleaning", "elevator",
-    "electrical", "fire safety", "general maintenance", "janitorial",
-    "network", "exterminator", "pest", "hvac", "sprinkler",
-    "plumbing issue", "fire/safety", "housekeeping", "fire alarm",
-    "misc", "access control", "badge/access", "maintenance",
-    "water/plumbing", "water issue", "other", "vertical transport",
-    "lift", "elevator/escalator", "security systems",
-    "electrical systems", "it/network", "connectivity", "general",
-    "it", "power", "power issue", "elec", "wifi", "it support",
-    "climate control", "a/c", "lighting", "heating/cooling",
-    "doors/locks", "parking", "grounds/landscaping", "structural",
-    "roofing", "windows", "paint", "carpentry", "appliances",
-    "signage", "furniture", "moving/relocation", "event setup",
-    "vending", "kitchen equipment", "restroom supplies",
-    "waste management", "recycling", "hazardous materials",
-    "emergency systems", "first aid", "safety equipment",
-    "surveillance", "alarm systems", "key management",
-    "visitor management", "mail services", "shipping/receiving",
-    "fleet services", "fuel systems", "generator", "ups/battery",
-    "data center", "server room", "telecom", "audio/visual",
-    "conference room equipment", "cubicle/workspace",
-    "ergonomics", "indoor air quality", "temperature control",
-    "humidity", "noise complaint", "odor complaint",
-    "pest sighting", "wildlife", "flooding", "leak",
-    "mold/mildew", "asbestos", "lead", "radon",
-    "ada compliance", "inspection", "permit", "code violation",
-]
+# Dynamically extracted from the CSV at import time so it never goes stale.
+# Used by the Semantic Classification Agent for input reporting.
+def _load_raw_categories():
+    import csv
+    try:
+        with open(RAW_CSV, "r") as f:
+            rows = list(csv.DictReader(f))
+        return sorted(set(
+            r.get("category", "").strip()
+            for r in rows
+            if r.get("category", "").strip()
+        ))
+    except Exception:
+        return []
+
+RAW_CATEGORIES = _load_raw_categories()

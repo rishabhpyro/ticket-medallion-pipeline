@@ -184,58 +184,7 @@ def main():
     import re
     from decimal import Decimal, InvalidOperation
 
-    CATEGORY_MAPPING = {
-        "elevator": "Elevator", "elevator/escalator": "Elevator", "lift": "Elevator", "vertical transport": "Elevator",
-        "electrical": "Electrical", "electrical systems": "Electrical", "elec": "Electrical", "power": "Electrical", "power issue": "Electrical", "lighting": "Electrical", "generator": "Electrical", "ups/battery": "Electrical",
-        "hvac": "HVAC", "a/c": "HVAC", "climate control": "HVAC", "heating/cooling": "HVAC", "temperature control": "HVAC", "humidity": "HVAC", "indoor air quality": "HVAC",
-        "ac": "HVAC", "air conditioning": "HVAC", "heating cooling": "HVAC", "hvac system": "HVAC", "cold": "HVAC",
-        "plumbing": "Plumbing", "plumbing issue": "Plumbing", "water/plumbing": "Plumbing", "water issue": "Plumbing", "flooding": "Plumbing", "leak": "Plumbing",
-        "fire safety": "Fire & Safety", "fire/safety": "Fire & Safety", "fire alarm": "Fire & Safety", "sprinkler": "Fire & Safety", "emergency systems": "Fire & Safety", "safety equipment": "Fire & Safety", "first aid": "Fire & Safety",
-        "pest control": "Pest Control", "pest": "Pest Control", "exterminator": "Pest Control", "pest sighting": "Pest Control", "wildlife": "Pest Control",
-        "cleaning": "Cleaning", "janitorial": "Cleaning", "housekeeping": "Cleaning", "waste management": "Cleaning", "recycling": "Cleaning", "restroom supplies": "Cleaning",
-        "security": "Security", "security systems": "Security", "badge/access": "Security", "access control": "Security", "surveillance": "Security", "alarm systems": "Security", "key management": "Security", "doors/locks": "Security", "visitor management": "Security",
-        "network": "IT & Network", "it/network": "IT & Network", "it": "IT & Network", "it support": "IT & Network", "connectivity": "IT & Network", "wifi": "IT & Network", "telecom": "IT & Network", "audio/visual": "IT & Network", "data center": "IT & Network", "server room": "IT & Network", "conference room equipment": "IT & Network",
-        "general maintenance": "General Maintenance", "maintenance": "General Maintenance", "general": "General Maintenance",
-        "structural": "Facilities", "roofing": "Facilities", "windows": "Facilities", "paint": "Facilities", "carpentry": "Facilities", "grounds/landscaping": "Facilities", "parking": "Facilities", "signage": "Facilities", "furniture": "Facilities", "appliances": "Facilities", "kitchen equipment": "Facilities", "vending": "Facilities", "cubicle/workspace": "Facilities", "ergonomics": "Facilities", "moving/relocation": "Facilities", "event setup": "Facilities",
-        "fleet services": "Fleet & Logistics", "fuel systems": "Fleet & Logistics", "shipping/receiving": "Fleet & Logistics", "mail services": "Fleet & Logistics",
-        "mold/mildew": "Health & Environmental", "asbestos": "Health & Environmental", "lead": "Health & Environmental", "radon": "Health & Environmental", "hazardous materials": "Health & Environmental", "noise complaint": "Health & Environmental", "odor complaint": "Health & Environmental",
-        "ada compliance": "Compliance", "inspection": "Compliance", "permit": "Compliance", "code violation": "Compliance",
-        "misc": "Other", "other": "Other",
-    }
-    PRIORITY_MAPPING = {
-        "critical": "CRITICAL", "crit": "CRITICAL", "urgent!!!": "CRITICAL", "asap": "HIGH",
-        "high": "HIGH", "hi": "HIGH",
-        "medium": "MEDIUM", "med": "MEDIUM", "normal": "MEDIUM",
-        "low": "LOW", "lo": "LOW",
-    }
-    GARBAGE_CATS = {"???", "asdf", "delete me", "test", "null", "", "n/a", "none", "tbd", "unknown"}
-    CAT_KEYWORDS = [
-        ("elevator", "Elevator"), ("lift", "Elevator"),
-        ("toilet", "Plumbing"), ("faucet", "Plumbing"), ("pipe burst", "Plumbing"),
-        ("water leak", "Plumbing"), ("hot water", "Plumbing"), ("overflowing", "Plumbing"),
-        ("leak", "Plumbing"), ("plumbing", "Plumbing"),
-        ("ac unit", "HVAC"), ("thermo", "HVAC"), ("temperature", "HVAC"),
-        ("hvac", "HVAC"), ("cooling", "HVAC"), ("heating", "HVAC"),
-        ("unit", "HVAC"), ("cycling", "HVAC"),
-        ("breaker", "Electrical"), ("outlet", "Electrical"),
-        ("fire extinguisher", "Fire & Safety"), ("smoke detector", "Fire & Safety"),
-        ("emergency exit", "Fire & Safety"), ("sprinkler", "Fire & Safety"),
-        ("security camera", "Security"), ("access card", "Security"),
-        ("wifi", "IT & Network"), ("network", "IT & Network"), ("vpn", "IT & Network"),
-        ("desk", "Facilities"), ("furniture", "Facilities"), ("window", "Facilities"),
-        ("restroom", "Cleaning"), ("cleaning", "Cleaning"),
-        ("bird", "Pest Control"), ("bugs", "Pest Control"), ("wasp", "Pest Control"),
-        ("mold", "Health & Environmental"), ("asbestos", "Health & Environmental"),
-        ("inspection", "Compliance"), ("wheelchair", "Compliance"),
-    ]
-    def classify_fb(val):
-        v = val.strip().lower()
-        if not v or v in GARBAGE_CATS:
-            return None
-        for kw, norm in CAT_KEYWORDS:
-            if kw in v:
-                return norm
-        return None
+    from src.categories import CATEGORY_MAPPING, PRIORITY_MAPPING, classify_category
 
     def parse_date_safe(value):
         if not value or not value.strip():
@@ -304,14 +253,7 @@ def main():
         created_at = parse_date_safe(row.get("created_at", ""))
         resolved_at = parse_date_safe(row.get("resolved_at", ""))
         raw_cat = (row.get("category") or "").strip().lower()
-        norm_cat = CATEGORY_MAPPING.get(raw_cat)
-        if not norm_cat:
-            norm_cat = classify_fb(raw_cat)
-        if not norm_cat and raw_cat:
-            if raw_cat in GARBAGE_CATS:
-                norm_cat = None
-            else:
-                norm_cat = raw_cat.title()
+        norm_cat, _ = classify_category(row.get("category") or "")
         raw_pri = (row.get("priority") or "").strip().lower()
         norm_pri = PRIORITY_MAPPING.get(raw_pri, raw_pri.upper() if raw_pri else None)
         cost = clean_cost(row.get("cost", ""))
